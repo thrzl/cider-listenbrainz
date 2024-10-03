@@ -7,11 +7,11 @@ This is a template/boilerplate for creating Cider plugins using Vue 3, TypeScrip
 ## Starting a new plugin project
 Using **Node**
 ```bash
-npx degit github:ciderapp/plugin-template your-plugin-name
+npx giget github:ciderapp/plugin-template your-plugin-name
 ```
 Using **Bun**
 ```bash
-bunx degit github:ciderapp/plugin-template your-plugin-name
+bunx giget github:ciderapp/plugin-template your-plugin-name
 ```
 
 ## Available Commands
