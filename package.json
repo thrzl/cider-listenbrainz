@@ -17,6 +17,7 @@
     "@ciderapp/pluginkit": "github:ciderapp/pluginkit",
     "@types/lodash": "^4.17.6",
     "@types/node": "^20.14.9",
+    "@types/musickit": "ciderapp/musickit-types",
     "@vitejs/plugin-vue": "^5.0.5",
     "adm-zip": "0.5.9",
     "pinia": "^2.2.0",
