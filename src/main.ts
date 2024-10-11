@@ -68,6 +68,11 @@ const { plugin, setupConfig, customElementName, goToPage, useCPlugin } = defineP
             customElements.define(customElementName(_key), value)
         }
 
+        /**
+         * Defining our custom settings element
+         */
+        this.SettingsElement = customElementName('settings');
+
         addImmersiveLayout({
             name: "My layout",
             identifier: "my-layout",
