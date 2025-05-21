@@ -133,7 +133,7 @@ const { plugin, setupConfig, customElementName, goToPage, useCPlugin } =
 				};
 				await fetch("https://api.listenbrainz.org/1/submit-listens", {
 					headers: {
-						Authorization: "Token ab2e9c69-f78c-43bf-8141-7b11fad2cfc9",
+						Authorization: `Token ${useConfig().listenBrainzToken}`,
 					},
 					body: JSON.stringify(requestBody),
 					method: "POST",
