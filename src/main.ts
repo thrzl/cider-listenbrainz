@@ -66,7 +66,7 @@ const { plugin, setupConfig, customElementName, goToPage, useCPlugin } =
 									release_name: nowPlayingItem.albumName.replace(
 										/\s*\(feat\. [^)]+\)/i,
 										"",
-									),
+									).replace(" - EP", "").replace(" - Single", ""),
 								},
 							},
 						],
@@ -126,7 +126,7 @@ const { plugin, setupConfig, customElementName, goToPage, useCPlugin } =
 								release_name: nowPlayingItem.albumName.replace(
 									/\s*\(feat\. [^)]+\)/i,
 									"",
-								),
+								).replace(" - EP", "").replace(" - Single", ""),
 							},
 						},
 					],
