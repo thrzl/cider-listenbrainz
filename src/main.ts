@@ -1,151 +1,158 @@
-import { defineCustomElement } from 'vue'
-import type { App } from 'vue'
-import { createPinia } from "pinia";
-import { definePluginContext, addMainMenuEntry, addMediaItemContextMenuEntry, addImmersiveMenuEntry, addImmersiveLayout, addCustomButton, createModal, useCiderAudio } from '@ciderapp/pluginkit'
-import HelloWorld from "./components/HelloWorld.vue";
+import { defineCustomElement } from "vue";
+import { definePluginContext } from "@ciderapp/pluginkit";
 import MySettings from "./components/MySettings.vue";
-import ModalExample from "./components/ModalExample.vue";
-import CustomImmersiveLayout from "./components/CustomImmersiveLayout.vue";
-import CustomPage from "./pages/CustomPage.vue";
-import PluginConfig from './plugin.config';
-
-
-/**
- * Initializing a Vue app instance so we can use things like Pinia.
- */
-const pinia = createPinia()
-
-/**
- * Function that configures the app instances of the custom elements
- */
-function configureApp(app: App) {
-    app.use(pinia)
-}
+import PluginConfig from "./plugin.config";
+import type { ListenBrainzSubmission } from "./types";
 
 /**
  * Custom Elements that will be registered in the app
  */
-export const CustomElements
-    = {
-    'hello-world':
-        defineCustomElement(HelloWorld, {
-            /**
-             * Disabling the shadow root DOM so that we can inject styles from the DOM
-             */
-            shadowRoot: false,
-            configureApp
-        }),
-    'settings': defineCustomElement(MySettings, {
-        shadowRoot: false,
-        configureApp
-    }),
-    'modal-example': defineCustomElement(ModalExample, {
-        shadowRoot: false,
-        configureApp
-    }),
-    'page-helloworld': defineCustomElement(CustomPage, {
-        shadowRoot: false,
-        configureApp
-    }),
-    'immersive-layout': defineCustomElement(CustomImmersiveLayout, {
-        shadowRoot: false,
-        configureApp
-    })
-}
+export const CustomElements = {
+	settings: defineCustomElement(MySettings, {
+		shadowRoot: false,
+	}),
+};
 
 /**
  * Defining the plugin context
  */
-const { plugin, setupConfig, customElementName, goToPage, useCPlugin } = definePluginContext({
-    ...PluginConfig,
-    CustomElements,
-    setup() {
-        /**
-         * Registering the custom elements in the app
-         */
-        for (const [key, value] of Object.entries(CustomElements)) {
-            const _key = key as keyof typeof CustomElements;
-            customElements.define(customElementName(_key), value)
-        }
+const { plugin, setupConfig, customElementName, goToPage, useCPlugin } =
+	definePluginContext({
+		...PluginConfig,
+		CustomElements,
+		setup() {
+			for (const [key, value] of Object.entries(CustomElements)) {
+				const _key = key as keyof typeof CustomElements;
+				customElements.define(customElementName(_key), value);
+			}
 
-        /**
-         * Defining our custom settings element
-         */
-        this.SettingsElement = customElementName('settings');
+			this.SettingsElement = customElementName("settings");
 
-        addImmersiveLayout({
-            name: "My layout",
-            identifier: "my-layout",
-            component: customElementName('immersive-layout'),
-            type: 'normal',
-        })
+			const media = MusicKit.getInstance();
 
-        // Here we add a new entry to the main menu
-        addMainMenuEntry({
-            label: "Go to my page",
-            onClick() {
-                goToPage({
-                    name: 'page-helloworld'
-                });
-            },
-        })
+			let alreadyScrobbled = false;
 
-        addMainMenuEntry({
-            label: "Modal example",
-            onClick() {
-                const { closeDialog, openDialog, dialogElement } = createModal({
-                    escClose: true,
-                })
-                const content = document.createElement(customElementName('modal-example'));
-                // @ts-ignore
-                content._props.closeFn = closeDialog;
-                dialogElement.appendChild(content);
-                openDialog();
-            },
-        })
+			media.addEventListener(
+				"nowPlayingItemDidChange",
+				async ({ item: nowPlayingItem }: { item: MusicKit.MediaItem }) => {
+					alreadyScrobbled = false; // whenever the item changes, we didn't scrobble it
+					if (!useConfig().listenBrainzToken) {
+						console.error("no token specified in settings!");
+						return;
+					}
+					const requestBody: ListenBrainzSubmission = {
+						listen_type: "playing_now",
+						payload: [
+							{
+								track_metadata: {
+									additional_info: {
+										media_player: "Cider",
+										submission_client: "thrzl/cider-listenbrainz",
+										submission_client_version: "1.0",
+										duration_ms: nowPlayingItem.playbackDuration,
+										isrc: (
+											nowPlayingItem.isrc.match(
+												/[A-Z]{2}-?\w{3}-?\d{2}-?\d{5}/,
+											) as string[]
+										)[0],
+										music_service: "music.apple.com",
+										tracknumber: nowPlayingItem.trackNumber,
+									},
+									artist_name: nowPlayingItem.artistName,
+									track_name: nowPlayingItem.title.replace(
+										/\s*\(feat\. [^)]+\)/i,
+										"",
+									),
+									release_name: nowPlayingItem.albumName.replace(
+										/\s*\(feat\. [^)]+\)/i,
+										"",
+									),
+								},
+							},
+						],
+					};
+					await fetch("https://api.listenbrainz.org/1/submit-listens", {
+						headers: {
+							Authorization: `Token ${useConfig().listenBrainzToken}`,
+						},
+						body: JSON.stringify(requestBody),
+						method: "POST",
+					});
+					console.info(
+						`send listenbrainz now playing for ${nowPlayingItem.title} - ${nowPlayingItem.artistName}`,
+					);
+				},
+			);
 
-        addImmersiveMenuEntry({
-            label: "Go to my page",
-            onClick() {
-                goToPage({
-                    name: 'page-helloworld'
-                });
-            },
-        })
+			media.addEventListener("playbackProgressDidChange", async () => {
+				// if (less than halfway through AND we've played less than 4 minutes) OR we already scrobbled
+				if (!useConfig().listenBrainzToken) {
+					console.error("no token specified in settings!");
+					return;
+				}
+				if (
+					(media.currentPlaybackProgress < 0.5 &&
+						media.currentPlaybackTime < 4 * 60) ||
+					alreadyScrobbled
+				) {
+					return;
+				}
+				const nowPlayingItem = media.nowPlayingItem;
 
-        // Here we add a custom button to the top right of the chrome
-        addCustomButton({
-            element: '♥',
-            location: 'chrome-top/right',
-            title: 'Click me!',
-            menuElement: customElementName('hello-world'),
-        })
+				const requestBody: ListenBrainzSubmission = {
+					listen_type: "single",
+					payload: [
+						{
+							listened_at: Math.floor(new Date().getTime() / 1000),
+							track_metadata: {
+								additional_info: {
+									media_player: "Cider",
+									submission_client: "thrzl/cider-listenbrainz",
+									submission_client_version: "1.0",
+									duration_ms: nowPlayingItem.playbackDuration,
+									isrc: (
+										nowPlayingItem.isrc.match(
+											/[A-Z]{2}-?\w{3}-?\d{2}-?\d{5}/,
+										) as string[]
+									)[0],
+									music_service: "music.apple.com",
+									tracknumber: nowPlayingItem.trackNumber,
+								},
+								artist_name: nowPlayingItem.artistName,
+								track_name: nowPlayingItem.title.replace(
+									/\s*\(feat\. [^)]+\)/i,
+									"",
+								),
+								release_name: nowPlayingItem.albumName.replace(
+									/\s*\(feat\. [^)]+\)/i,
+									"",
+								),
+							},
+						},
+					],
+				};
+				await fetch("https://api.listenbrainz.org/1/submit-listens", {
+					headers: {
+						Authorization: "Token ab2e9c69-f78c-43bf-8141-7b11fad2cfc9",
+					},
+					body: JSON.stringify(requestBody),
+					method: "POST",
+				});
+				alreadyScrobbled = true;
+				console.info(
+					`send listenbrainz scrobble for ${nowPlayingItem.title} - ${nowPlayingItem.artistName}`,
+				);
+			});
+		},
+	});
 
-        const audio = useCiderAudio();
-        audio.subscribe('ready', () => {
-            console.log("CiderAudio is ready!", audio.context)
-        })
-
-        addMediaItemContextMenuEntry({
-            label: 'Send to plugin',
-            onClick(item) {
-                console.log('Got this item', item)
-            },
-        })
-    }
-})
-
-/**
- * Some boilerplate code for our own configuration
- */
 export const cfg = setupConfig({
-    favoriteColor: <'red' | 'green' | 'blue'>'blue',
-    count: <number>0,
-    booleanOption: <boolean>false,
+	listenBrainzServer: <string>"https://api.listenbrainz.org",
+	listenBrainzToken: <string>"",
 });
 
 export function useConfig() {
-    return cfg.value;
+	return cfg.value;
 }
 
 /**

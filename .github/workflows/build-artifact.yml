@@ -1,0 +1,32 @@
+name: build and publish artifact
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build-and-publish:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v2
+
+      - name: Install dependencies
+        run: bun install
+
+      - name: Build project (without type checker)
+        run: bun run vite build
+
+      - name: Archive project
+        run: |
+          zip -r cider-listenbrainz.zip dist/
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: cider-listenbrainz
+          path: cider-listenbrainz.zip
