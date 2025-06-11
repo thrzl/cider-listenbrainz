@@ -19,14 +19,10 @@ jobs:
         run: bun install
 
       - name: Build project (without type checker)
-        run: bun run vite build
-
-      - name: Archive project
-        run: |
-          zip -r cider-listenbrainz.zip dist/
+        run: bun run prepare-marketplace
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: cider-listenbrainz
-          path: cider-listenbrainz.zip
+          name: xyz.thrzl.cider-listenbrainz.zip
+          path: publish/xyz.thrzl.cider-listenbrainz.zip
