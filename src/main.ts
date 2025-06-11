@@ -38,6 +38,15 @@ const { plugin, setupConfig, customElementName, goToPage, useCPlugin } =
           return;
         }
         const nowPlayingItem = media.nowPlayingItem;
+        const trueTrackTitle = nowPlayingItem.title.replace(
+          /\s*\(feat\. [^)]+\)/i,
+          "",
+        );
+        const featArtists =
+          nowPlayingItem.title.match(/\(feat\. (.*?)\)/)?.[1] || undefined;
+        console.log({ featArtists });
+        const trueTrackArtists =
+          nowPlayingItem.artistName + (featArtists ? `, ${featArtists}` : "");
         return {
           listen_type: isNowPlaying ? "playing_now" : "single",
           payload: [
@@ -63,11 +72,8 @@ const { plugin, setupConfig, customElementName, goToPage, useCPlugin } =
                     tracknumber: nowPlayingItem.trackNumber,
                   }),
                 },
-                artist_name: nowPlayingItem.artistName,
-                track_name: nowPlayingItem.title.replace(
-                  /\s*\(feat\. [^)]+\)/i,
-                  "",
-                ),
+                artist_name: trueTrackArtists,
+                track_name: trueTrackTitle,
                 release_name: nowPlayingItem.albumName
                   .replace(/\s*\(feat\. [^)]+\)/i, "")
                   .replace(" - EP", "")
@@ -91,7 +97,7 @@ const { plugin, setupConfig, customElementName, goToPage, useCPlugin } =
           console.info("Sending ListenBrainz now playing...");
           const requestBody = buildScrobble(true);
           console.info(requestBody);
-          await fetch("https://api.listenbrainz.org/1/submit-listens", {
+          await fetch(`${useConfig().listenBrainzServer}/1/submit-listens`, {
             headers: {
               Authorization: `Token ${useConfig().listenBrainzToken}`,
             },
@@ -120,7 +126,7 @@ const { plugin, setupConfig, customElementName, goToPage, useCPlugin } =
         const nowPlayingItem = media.nowPlayingItem;
 
         const requestBody = buildScrobble(false);
-        await fetch("https://api.listenbrainz.org/1/submit-listens", {
+        await fetch(`${useConfig().listenBrainzServer}/1/submit-listens`, {
           headers: {
             Authorization: `Token ${useConfig().listenBrainzToken}`,
           },

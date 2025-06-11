@@ -1,5 +1,4 @@
 import { createId } from "@paralleldrive/cuid2";
-
 /**
  * Plugin configuration.
  */
@@ -9,9 +8,9 @@ export default {
   name: "ListenBrainz Scrobbler",
   description:
     "A Cider plugin to scrobble to ListenBrainz, including ISRC for reliable matching.",
-  version: "0.0.3",
+  version: "0.0.4",
   author: "thrzl",
-  repo: "https://github.com/thrzl/new-cider-listenbrainz",
+  repo: "https://github.com/thrzl/cider-listenbrainz",
   entry: {
     "plugin.js": {
       type: "main",
