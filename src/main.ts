@@ -63,7 +63,7 @@ const { plugin, setupConfig, customElementName, goToPage, useCPlugin } =
                   ...(nowPlayingItem.isrc && {
                     isrc: (
                       nowPlayingItem.isrc.match(
-                        /[A-Z]{2}-?\w{3}-?\d{2}-?\d{5}/,
+                        /[A-Z]{2}-?\w{3}-?\d{2}-?\d{5}$/,
                       ) as string[]
                     )[0],
                   }),
